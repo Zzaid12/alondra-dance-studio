@@ -35,7 +35,7 @@ export const AboutSection = () => {
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
           En Alondra Pole Space te ofrecemos una sala única para entrenar pole dance en todas sus versiones (Pole Sport, Exotic, Dinámico, Flow, Coreo…) en formato open pole y otras disciplinas como yoga o pilates. 
 Sin clases, sin horarios fijos, con total libertad. 
-Nuestro espacio esta diseñado para ofrecerte la mejor experiencia de entrenamiento: Barras, espejos, suelo seguro, iluminación... pensado para que mejores tu técnica en un ambiente íntimo y motivador.
+Nuestro espacio esta diseñado para ofrecerte la mejor experiencia de entrenamiento: barras, espejos, suelo seguro, iluminación... pensado para que mejores tu técnica en un ambiente íntimo y motivador.
           </p>
         </div>
 
