@@ -173,6 +173,25 @@ export const Navigation = () => {
                 <div className="space-y-2 pt-2 border-t border-border">
                   <Button
                     variant="ghost"
+                    asChild
+                    className="w-full justify-start"
+                  >
+                    <Link to="/perfil" onClick={() => setIsOpen(false)}>
+                      <User className="w-4 h-4 mr-2" />
+                      Mi Perfil
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    asChild
+                    className="w-full justify-start"
+                  >
+                    <Link to="/reservar" onClick={() => setIsOpen(false)}>
+                      Reservar Clase
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => {
                       handleSignOut();
                       setIsOpen(false);
