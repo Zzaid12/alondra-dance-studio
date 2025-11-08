@@ -65,7 +65,7 @@ const Normas = () => {
             <div>
               <p className="font-semibold">6. Cancelaciones y modificaciones</p>
               <ul className="list-disc pl-6 space-y-1">
-                <li>Las cancelaciones se podrán realizar con al menos 12 horas de antelación para conservar la hora del bono.</li>
+                <li>Las cancelaciones se podrán realizar con al menos 24 horas de antelación para conservar la hora del bono.</li>
                 <li>Pasado ese plazo, no se realizará devolución ni cambio de horario.</li>
                 <li>Los bonos estarán sujetos a las condiciones de caducidad y uso indicadas en el momento de la compra.</li>
               </ul>
