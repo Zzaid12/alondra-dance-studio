@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   try {
     console.log("cancel-reserva: inicio", { method: req.method, url: req.url });
     const { reservaId } = await req.json();
-    if (!reservaId) return new Response(JSON.stringify({ error: "reservaId requerido" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
+    if (!reservaId) return new Response(JSON.stringify({ error: "error, revisa nuestra politica de cancelacion" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     const authHeader = req.headers.get("authorization") || "";
     const admin = createClient(
@@ -58,22 +58,22 @@ Deno.serve(async (req) => {
         console.error("jwt_decode_error", e);
       }
     }
-    if (!userId) return new Response(JSON.stringify({ error: "no_auth" }), { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
+    if (!userId) return new Response(JSON.stringify({ error: "error, revisa nuestra politica de cancelacion" }), { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     const { data: r, error: er } = await admin
       .from("reservas")
       .select("id, usuario_id, fecha, estado, metodo_pago, bono_usuario_id")
       .eq("id", reservaId)
       .single();
-    if (er || !r) return new Response(JSON.stringify({ error: "reserva_no_encontrada" }), { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } });
-    if (r.usuario_id !== userId) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } });
-    if (r.estado !== "confirmada" && r.estado !== "pendiente") return new Response(JSON.stringify({ error: "no_cancelable" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
+    if (er || !r) return new Response(JSON.stringify({ error: "error, revisa nuestra politica de cancelacion" }), { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } });
+    if (r.usuario_id !== userId) return new Response(JSON.stringify({ error: "error, revisa nuestra politica de cancelacion" }), { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } });
+    if (r.estado !== "confirmada" && r.estado !== "pendiente") return new Response(JSON.stringify({ error: "error, revisa nuestra politica de cancelacion" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     // Política 24h
     const fechaReserva = new Date(r.fecha);
     const ahora = new Date();
     if (fechaReserva.getTime() - ahora.getTime() < 24 * 60 * 60 * 1000) {
-      return new Response(JSON.stringify({ error: "fuera_de_plazo" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
+      return new Response(JSON.stringify({ error: "error, revisa nuestra politica de cancelacion" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
     // Reembolso si fue pagada con Stripe
@@ -100,7 +100,36 @@ Deno.serve(async (req) => {
 
     // Devolver clase al bono si aplica
     if (r.bono_usuario_id) {
-      await admin.rpc("exec_sql", { _sql: `update public.bonos_usuario set clases_restantes = clases_restantes + 1, estado = 'activo' where id = ${r.bono_usuario_id};` } as any).catch(() => {});
+      try {
+        // Obtener el estado actual del bono
+        const { data: bonoData, error: bonoError } = await admin
+          .from("bonos_usuario")
+          .select("clases_restantes, estado")
+          .eq("id", r.bono_usuario_id)
+          .single();
+        
+        if (!bonoError && bonoData) {
+          // Incrementar clases_restantes y reactivar si estaba agotado
+          const nuevasClases = (bonoData.clases_restantes || 0) + 1;
+          const nuevoEstado = bonoData.estado === 'agotado' ? 'activo' : bonoData.estado;
+          
+          const { error: updateError } = await admin
+            .from("bonos_usuario")
+            .update({ 
+              clases_restantes: nuevasClases,
+              estado: nuevoEstado
+            })
+            .eq("id", r.bono_usuario_id);
+          
+          if (updateError) {
+            console.error("Error al devolver clase al bono:", updateError);
+          } else {
+            console.log("Clase devuelta al bono:", r.bono_usuario_id, "Nuevas clases:", nuevasClases);
+          }
+        }
+      } catch (bonoErr) {
+        console.error("Error al procesar devolución de bono:", bonoErr);
+      }
     }
 
     await admin.from("reservas").update({ estado: "cancelada" }).eq("id", reservaId);
@@ -108,6 +137,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
   } catch (e) {
     console.error("cancel-reserva error:", e);
-    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } });
+    return new Response(JSON.stringify({ error: "error, revisa nuestra politica de cancelacion" }), { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } });
   }
 });

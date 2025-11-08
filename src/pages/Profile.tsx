@@ -11,8 +11,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { LogOut } from "lucide-react";
 
 type Pago = {
   id: number;
@@ -44,6 +46,8 @@ type Reserva = {
 };
 
 const Profile = () => {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [pagos, setPagos] = useState<Pago[]>([]);
   const [bonos, setBonos] = useState<BonoActivo[]>([]);
   const [reservasActivas, setReservasActivas] = useState<Reserva[]>([]);
@@ -57,6 +61,11 @@ const Profile = () => {
   const [experience, setExperience] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [historialExpandido, setHistorialExpandido] = useState<boolean>(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -364,7 +373,7 @@ const Profile = () => {
                                 if (!error) {
                                   alert("Reserva cancelada correctamente.");
                                 } else {
-                                  alert(`No se pudo cancelar: ${error.message || 'Error desconocido'}`);
+                                  alert("Error, revisa nuestra politica de cancelacion");
                                 }
                               }}
                             >
@@ -461,9 +470,21 @@ const Profile = () => {
                 ))}
               </CardContent>
             </Card>
-          </div>
 
-          {/* Nota eliminada por requerimiento: simplificar a botón + reservas + bonos */}
+            {/* Botón de cerrar sesión */}
+            <Card className="elegant-shadow">
+              <CardContent className="pt-6">
+                <Button
+                  variant="outline"
+                  onClick={handleSignOut}
+                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Cerrar Sesión
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
