@@ -125,18 +125,18 @@ async function generarCodigoAccesoReserva(fecha, horaInicio, horaFin, minutosAnt
     throw new Error("Faltan credenciales de TTLock");
   }
   const accessToken = await getTTLockAccessToken(CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD);
-  // 🧪 MODO PRUEBAS: Código válido AHORA por 3 minutos
-  const ahora = new Date();
-  const fechaInicio = new Date(ahora);
-  const fechaFin = new Date(ahora.getTime() + 3 * 60 * 1000);
-  // 📅 MODO PRODUCCIÓN: Descomentar estas líneas y comentar las de arriba
-  // const [year, month, day] = fecha.split("-").map(Number);
-  // const [horaInicioH, horaInicioM] = horaInicio.split(":").map(Number);
-  // const [horaFinH, horaFinM] = horaFin.split(":").map(Number);
-  // const fechaInicio = new Date(year, month - 1, day, horaInicioH, horaInicioM);
-  // const fechaFin = new Date(year, month - 1, day, horaFinH, horaFinM);
-  // fechaInicio.setMinutes(fechaInicio.getMinutes() - minutosAntes);
-  // fechaFin.setMinutes(fechaFin.getMinutes() + minutosDespues);
+  // 📅 MODO PRODUCCIÓN: Usar la fecha de la reserva
+  const [year, month, day] = fecha.split("-").map(Number);
+  const [horaInicioH, horaInicioM] = horaInicio.split(":").map(Number);
+  const [horaFinH, horaFinM] = horaFin.split(":").map(Number);
+  const fechaInicio = new Date(year, month - 1, day, horaInicioH, horaInicioM);
+  const fechaFin = new Date(year, month - 1, day, horaFinH, horaFinM);
+  fechaInicio.setMinutes(fechaInicio.getMinutes() - minutosAntes);
+  fechaFin.setMinutes(fechaFin.getMinutes() + minutosDespues);
+  // 🧪 MODO PRUEBAS: Descomentar estas líneas y comentar las de arriba para pruebas
+  // const ahora = new Date();
+  // const fechaInicio = new Date(ahora);
+  // const fechaFin = new Date(ahora.getTime() + 3 * 60 * 1000);
   const startDate = fechaInicio.getTime();
   const endDate = fechaFin.getTime();
   const passcode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -301,9 +301,24 @@ Deno.serve(async (req)=>{
           console.log('→ Creando reserva:', {
             usuarioId,
             fecha,
+            fechaOriginal: meta.fecha,
             franjaHorariaId,
             tipoReservaId
           });
+          // Validar que la fecha esté en formato YYYY-MM-DD
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+            console.error('✗ Formato de fecha inválido:', fecha);
+            return new Response(JSON.stringify({
+              error: "Formato de fecha inválido",
+              fechaRecibida: fecha
+            }), {
+              status: 400,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders
+              }
+            });
+          }
           const { data: tr, error: trError } = await sb.from('tipos_reserva').select('numero_barras, nombre').eq('id', tipoReservaId).single();
           if (trError) {
             console.error('✗ Error obteniendo tipo_reserva:', trError);
@@ -395,6 +410,17 @@ Deno.serve(async (req)=>{
             console.log('📧 Estado del email:', { userEmail, hasEmail: !!userEmail });
             if (userEmail) {
               console.log('📧 Preparando email de confirmación de reserva...');
+              // Formatear fecha sin problemas de zona horaria
+              const fechaStr = String(meta.fecha);
+              const [year, month, day] = fechaStr.split('-').map(Number);
+              const fechaDate = new Date(year, month - 1, day);
+              const fechaFormateada = fechaDate.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              });
+              
               const horaInicio = franja?.hora_inicio || '';
               const horaFin = franja?.hora_fin || '';
               const horario = horaInicio && horaFin ? `de ${horaInicio} a ${horaFin}` : '';
@@ -518,7 +544,7 @@ Deno.serve(async (req)=>{
                       
                       <div class="info-box">
                         <h2>Detalles de tu reserva</h2>
-                        <p><strong>Fecha:</strong> ${fecha}</p>
+                        <p><strong>Fecha:</strong> ${fechaFormateada}</p>
                         <p><strong>Horario:</strong> ${horario}</p>
                         <p><strong>Tipo:</strong> ${nombreTipoReserva}</p>
                         <p><strong>Precio:</strong> ${(Number(session.amount_total ?? 0) / 100).toFixed(2)}€</p>
@@ -538,7 +564,7 @@ Deno.serve(async (req)=>{
                 </html>
               `;
               const codigoTexto = codigoAcceso ? `\n\n🔑 CÓDIGO DE ACCESO: ${codigoAcceso}\nVálido desde: ${validoDesde ? new Date(validoDesde).toLocaleString('es-ES') : ''}\nVálido hasta: ${validoHasta ? new Date(validoHasta).toLocaleString('es-ES') : ''}\n\nIntroduce este código en el teclado de la puerta.\n` : '';
-              const text = `¡Reserva confirmada!\n\nFecha: ${fecha}\nHorario: ${horario}\nTipo: ${nombreTipoReserva}\nPrecio: ${(Number(session.amount_total ?? 0) / 100).toFixed(2)}€${codigoTexto}\n\nPuedes consultar tu reserva en tu perfil.\n¡Te esperamos!`;
+              const text = `¡Reserva confirmada!\n\nFecha: ${fechaFormateada}\nHorario: ${horario}\nTipo: ${nombreTipoReserva}\nPrecio: ${(Number(session.amount_total ?? 0) / 100).toFixed(2)}€${codigoTexto}\n\nPuedes consultar tu reserva en tu perfil.\n¡Te esperamos!`;
               try {
                 await sendEmail(userEmail, subject, html, text);
                 console.log('✓ Email de confirmación enviado exitosamente');

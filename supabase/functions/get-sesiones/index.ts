@@ -1,3 +1,5 @@
+// @ts-nocheck
+// Función para obtener todas las sesiones (activas y canceladas) para vista administrativa
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -87,22 +89,22 @@ Deno.serve(async (req) => {
     });
 
     // Obtener emails desde auth.users para usuarios sin email en profile
-    for (const userId of userIds) {
+    for (const userId of userIds as string[]) {
       if (!usuariosMap.has(userId) || !usuariosMap.get(userId)?.email) {
         try {
           const { data: userData } = await adminClient.auth.admin.getUserById(userId);
           if (userData?.user?.email) {
             const existing = usuariosMap.get(userId);
             usuariosMap.set(userId, {
-              nombre: existing?.nombre || userData.user.email.split("@")[0] || "Usuario",
-              email: userData.user.email,
+              nombre: existing?.nombre || (userData.user.email as string).split("@")[0] || "Usuario",
+              email: userData.user.email as string,
             });
           }
         } catch (e) {
           // Si no se puede obtener, usar valores por defecto
           if (!usuariosMap.has(userId)) {
             usuariosMap.set(userId, {
-              nombre: `Usuario ${userId.slice(0, 8)}`,
+              nombre: `Usuario ${(userId as string).slice(0, 8)}`,
               email: "",
             });
           }
@@ -142,4 +144,5 @@ Deno.serve(async (req) => {
     );
   }
 });
+
 

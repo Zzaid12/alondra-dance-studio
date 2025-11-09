@@ -100,18 +100,18 @@ async function generarCodigoAccesoReserva(fecha, horaInicio, horaFin, minutosAnt
     throw new Error("Faltan credenciales de TTLock");
   }
   const accessToken = await getTTLockAccessToken(CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD);
-  // 🧪 MODO PRUEBAS: Código válido AHORA por 3 minutos
-  const ahora = new Date();
-  const fechaInicio = new Date(ahora);
-  const fechaFin = new Date(ahora.getTime() + 3 * 60 * 1000);
-  // 📅 MODO PRODUCCIÓN: Descomentar estas líneas y comentar las de arriba
-  // const [year, month, day] = fecha.split("-").map(Number);
-  // const [horaInicioH, horaInicioM] = horaInicio.split(":").map(Number);
-  // const [horaFinH, horaFinM] = horaFin.split(":").map(Number);
-  // const fechaInicio = new Date(year, month - 1, day, horaInicioH, horaInicioM);
-  // const fechaFin = new Date(year, month - 1, day, horaFinH, horaFinM);
-  // fechaInicio.setMinutes(fechaInicio.getMinutes() - minutosAntes);
-  // fechaFin.setMinutes(fechaFin.getMinutes() + minutosDespues);
+  // 📅 MODO PRODUCCIÓN: Usar la fecha de la reserva
+  const [year, month, day] = fecha.split("-").map(Number);
+  const [horaInicioH, horaInicioM] = horaInicio.split(":").map(Number);
+  const [horaFinH, horaFinM] = horaFin.split(":").map(Number);
+  const fechaInicio = new Date(year, month - 1, day, horaInicioH, horaInicioM);
+  const fechaFin = new Date(year, month - 1, day, horaFinH, horaFinM);
+  fechaInicio.setMinutes(fechaInicio.getMinutes() - minutosAntes);
+  fechaFin.setMinutes(fechaFin.getMinutes() + minutosDespues);
+  // 🧪 MODO PRUEBAS: Descomentar estas líneas y comentar las de arriba para pruebas
+  // const ahora = new Date();
+  // const fechaInicio = new Date(ahora);
+  // const fechaFin = new Date(ahora.getTime() + 3 * 60 * 1000);
   const startDate = fechaInicio.getTime();
   const endDate = fechaFin.getTime();
   const passcode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -273,7 +273,17 @@ Deno.serve(async (req) => {
     console.log('✓ Email del usuario:', userEmail);
     
     // Preparar datos del email
-    const fecha = reserva.fecha;
+    // Formatear fecha sin problemas de zona horaria
+    const fechaStr = reserva.fecha;
+    const [year, month, day] = fechaStr.split('-').map(Number);
+    const fechaDate = new Date(year, month - 1, day);
+    const fechaFormateada = fechaDate.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
     const horaInicio = reserva.franjas_horarias?.hora_inicio || '';
     const horaFin = reserva.franjas_horarias?.hora_fin || '';
     const horario = horaInicio && horaFin ? `de ${horaInicio} a ${horaFin}` : '';
@@ -427,7 +437,7 @@ Deno.serve(async (req) => {
             
             <div class="info-box">
               <h2>Detalles de tu reserva</h2>
-              <p><strong>Fecha:</strong> ${fecha}</p>
+              <p><strong>Fecha:</strong> ${fechaFormateada}</p>
               <p><strong>Horario:</strong> ${horario}</p>
               <p><strong>Tipo:</strong> ${nombreTipoReserva}</p>
               <p><strong>Método de pago:</strong> ${metodoPago}</p>
@@ -463,7 +473,7 @@ Deno.serve(async (req) => {
       </html>
     `;
     const codigoTexto = codigoAcceso ? `\n\n🔑 CÓDIGO DE ACCESO: ${codigoAcceso}\nVálido desde: ${validoDesde ? new Date(validoDesde).toLocaleString('es-ES') : ''}\nVálido hasta: ${validoHasta ? new Date(validoHasta).toLocaleString('es-ES') : ''}\n\nIntroduce este código en el teclado de la puerta.\n` : '';
-    const text = `¡Reserva confirmada!\n\nFecha: ${fecha}\nHorario: ${horario}\nTipo: ${nombreTipoReserva}\nMétodo de pago: ${metodoPago}\nPrecio: ${precio}${codigoTexto}\n\nPuedes consultar tu reserva en tu perfil.\n¡Te esperamos!`;
+    const text = `¡Reserva confirmada!\n\nFecha: ${fechaFormateada}\nHorario: ${horario}\nTipo: ${nombreTipoReserva}\nMétodo de pago: ${metodoPago}\nPrecio: ${precio}${codigoTexto}\n\nPuedes consultar tu reserva en tu perfil.\n¡Te esperamos!`;
     
     // Enviar email
     await sendEmail(userEmail, subject, html, text);

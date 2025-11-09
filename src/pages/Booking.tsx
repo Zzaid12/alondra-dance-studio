@@ -11,7 +11,12 @@ import { Input } from "@/components/ui/input";
 
 const Booking = () => {
   const [selectedOption, setSelectedOption] = useState<string>("barra");
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  // Inicializar fecha a medianoche en hora local para evitar problemas de zona horaria
+  const getTodayAtMidnight = () => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  };
+  const [date, setDate] = useState<Date | undefined>(getTodayAtMidnight());
   const [times, setTimes] = useState<{ label: string; franjaId: number; tipoReservaId: number; disponibles: number; disabled: boolean }[]>([]);
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [tiposCatalogo, setTiposCatalogo] = useState<{
@@ -108,7 +113,11 @@ const Booking = () => {
       const franjasFiltradas = Array.from(horasUnicas.values());
 
       // 3) Traer disponibilidad agregada para esa fecha (puede no devolver filas para franjas sin reservas)
-      const fechaISO = date.toISOString().slice(0,10);
+      // Formatear fecha en formato YYYY-MM-DD usando la fecha local (no UTC)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const fechaISO = `${year}-${month}-${day}`;
       const { data: disp, error: e2 } = await (supabase as any)
         .from("vista_disponibilidad_diaria")
         .select("franja_horaria_id,barras_reservadas,barras_disponibles,fecha")
@@ -347,7 +356,15 @@ const Booking = () => {
                 <Calendar
                   mode="single"
                   selected={date}
-                  onSelect={setDate}
+                  onSelect={(selectedDate) => {
+                    if (selectedDate) {
+                      // Normalizar la fecha a medianoche en hora local para evitar problemas de zona horaria
+                      const normalizedDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                      setDate(normalizedDate);
+                    } else {
+                      setDate(undefined);
+                    }
+                  }}
                   captionLayout="dropdown"
                   locale={es}
                   className="rounded-md border shadow-sm"
@@ -395,7 +412,14 @@ const Booking = () => {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Fecha</span>
-                            <span className="font-medium">{date?.toLocaleDateString()}</span>
+                            <span className="font-medium">
+                              {date ? date.toLocaleDateString('es-ES', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                              }) : ''}
+                            </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Horario</span>
@@ -584,7 +608,21 @@ const Booking = () => {
                               const sel = times.find(t => t.label === selectedTime);
                               if (!sel) return;
                               if (!acceptedNorms) { alert('Debes aceptar las Normas de uso.'); return; }
-                              const fechaISO = date.toISOString().slice(0,10);
+                              // Formatear fecha en formato YYYY-MM-DD usando la fecha local (no UTC)
+                              const year = date.getFullYear();
+                              const month = String(date.getMonth() + 1).padStart(2, '0');
+                              const day = String(date.getDate()).padStart(2, '0');
+                              const fechaISO = `${year}-${month}-${day}`;
+                              console.log('📅 Fecha seleccionada:', {
+                                fechaOriginal: date,
+                                fechaISO: fechaISO,
+                                year: year,
+                                month: month,
+                                day: day,
+                                getFullYear: date.getFullYear(),
+                                getMonth: date.getMonth(),
+                                getDate: date.getDate()
+                              });
                               try {
                                 setLoadingAction(true);
                                 if (selectedOption === 'bono') {
