@@ -82,7 +82,7 @@ export const Footer = () => {
             <CardContent>
               <div className="rounded-lg overflow-hidden mb-4 h-64 border elegant-shadow">
                 <iframe
-                  src="https://www.google.com/maps?q=Calle+Valle+Inclán+24,+Madrid,+España&output=embed"
+                  src="https://www.google.com/maps?q=40.380271,-3.772022&output=embed"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
@@ -94,7 +94,7 @@ export const Footer = () => {
                 />
               </div>
               <Button variant="outline" size="sm" className="w-full" asChild>
-                <a href="https://maps.app.goo.gl/aTCxszzeMnVJHicU6?g_st=iw" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.google.com/maps?q=40.380271,-3.772022" target="_blank" rel="noopener noreferrer">
                   Abrir en Google Maps
                 </a>
               </Button>

@@ -119,12 +119,16 @@ const Profile = () => {
       const activas: Reserva[] = [];
       const anteriores: Reserva[] = [];
       (reservasData || []).forEach((r: any) => {
-        const fecha = new Date(r.fecha);
+        // Parsear fecha sin problemas de zona horaria
+        const [year, month, day] = r.fecha.split('-').map(Number);
+        const fecha = new Date(year, month - 1, day);
         const reserva: Reserva = {
           ...r,
           hora_inicio: r.franjas_horarias?.hora_inicio || undefined
         };
-        if ((r.estado === 'confirmada' || r.estado === 'pendiente') && fecha >= new Date(hoy.toDateString())) {
+        // Comparar fechas sin hora para evitar problemas de zona horaria
+        const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+        if ((r.estado === 'confirmada' || r.estado === 'pendiente') && fecha >= hoySinHora) {
           activas.push(reserva);
         } else {
           anteriores.push(reserva);
@@ -199,12 +203,16 @@ const Profile = () => {
           const activas: Reserva[] = [];
           const anteriores: Reserva[] = [];
           (reservasData || []).forEach((r: any) => {
-            const fecha = new Date(r.fecha);
+            // Parsear fecha sin problemas de zona horaria
+            const [year, month, day] = r.fecha.split('-').map(Number);
+            const fecha = new Date(year, month - 1, day);
             const reserva: Reserva = {
               ...r,
               hora_inicio: r.franjas_horarias?.hora_inicio || undefined
             };
-            if ((r.estado === 'confirmada' || r.estado === 'pendiente') && fecha >= new Date(hoy.toDateString())) {
+            // Comparar fechas sin hora para evitar problemas de zona horaria
+            const hoySinHora = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+            if ((r.estado === 'confirmada' || r.estado === 'pendiente') && fecha >= hoySinHora) {
               activas.push(reserva);
             } else {
               anteriores.push(reserva);
@@ -267,7 +275,7 @@ const Profile = () => {
               Mi <span className="hero-text-gradient">Perfil</span>
             </h1>
             <p className="text-muted-foreground">
-              Gestiona tu información personal y revisa tu historial de clases
+              Gestiona tu información personal y revisa tu historial de sesiones
             </p>
           </div>
 
@@ -341,7 +349,9 @@ const Profile = () => {
                     : usandoBono
                       ? 'Barra suelta (usando bono)'
                       : 'Barra suelta';
-                  const fechaReserva = new Date(r.fecha);
+                  // Parsear fecha sin problemas de zona horaria
+                  const [year, month, day] = r.fecha.split('-').map(Number);
+                  const fechaReserva = new Date(year, month - 1, day);
                   const fechaFormateada = fechaReserva.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
                   const horaFormateada = r.hora_inicio 
                     ? r.hora_inicio.slice(0, 5) 
@@ -431,7 +441,11 @@ const Profile = () => {
                     <div key={r.id} className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">{titulo}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(r.fecha).toLocaleString()}</p>
+                        {(() => {
+                          const [year, month, day] = r.fecha.split('-').map(Number);
+                          const fechaReserva = new Date(year, month - 1, day);
+                          return <p className="text-xs text-muted-foreground">{fechaReserva.toLocaleString('es-ES')}</p>;
+                        })()}
                       </div>
                       <Badge variant="outline" className="text-xs capitalize">{r.estado}</Badge>
                     </div>
@@ -463,9 +477,8 @@ const Profile = () => {
                       ) : (
                         <p className="text-xs text-muted-foreground">Bono listo para usar</p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-1">Puede reservar: {b.tipo_bono.toLowerCase().includes('mañanas') ? 'solo mañanas' : 'tarde/punta'}</p>
                     </div>
-                    <Badge variant="secondary" className="text-xs">{b.clases_restantes} clases</Badge>
+                    <Badge variant="secondary" className="text-xs">{b.clases_restantes} sesiones</Badge>
                   </div>
                 ))}
               </CardContent>

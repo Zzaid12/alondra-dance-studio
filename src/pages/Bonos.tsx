@@ -63,7 +63,7 @@ const Bonos = () => {
                 <p className="text-muted-foreground text-center">
                   {b.nombre.includes('mañanas')
                     ? (b.nombre.includes('5 barras') ? 'Precio base reducido, recomendado para principiantes' : 'Para peñita guay que madruga')
-                    : (b.nombre.includes('5 barras') ? 'Precio base, recomendado para principiantes' : 'Para la peñita guay')}
+                    : (b.nombre.includes('5 barras') ? 'Precio base, recomendado para principiantes' : 'Para los más adictos a entrenar con nosotros')}
                 </p>
                 <ul className="space-y-1 text-sm">
                   <li className="flex items-center justify-center gap-2">
