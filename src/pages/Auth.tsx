@@ -90,6 +90,57 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!formData.email.trim()) {
+      toast({
+        title: "Email requerido",
+        description: "Por favor, ingresa tu email para recuperar tu contraseña",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Usar la URL de producción si estamos en producción, sino usar la URL actual
+      // Esto asegura que siempre se use la URL correcta según el entorno
+      const isProduction = window.location.hostname === 'alondrapolespace.es' || 
+                           window.location.hostname === 'www.alondrapolespace.es';
+      const baseUrl = isProduction 
+        ? 'https://alondrapolespace.es' 
+        : window.location.origin;
+      
+      const redirectUrl = `${baseUrl}/reset-password`;
+      
+      console.log('URL de redirección para reset password:', redirectUrl);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email.trim(), {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Email enviado",
+          description: "Revisa tu email para restablecer tu contraseña",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Error inesperado. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -289,6 +340,21 @@ const Auth = () => {
                   >
                     {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
                   </Button>
+
+                  <div className="text-center mt-4 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-sm text-muted-foreground hover:text-primary underline transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isLoading}
+                      style={{ 
+                        textDecoration: 'underline',
+                        cursor: isLoading ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  </div>
                 </form>
               </TabsContent>
 
