@@ -22,13 +22,13 @@ const Bonos = () => {
   const [couponById, setCouponById] = useState<Record<number, string>>({});
   const [couponStatusById, setCouponStatusById] = useState<Record<number, "valid" | "invalid" | null>>({});
   const [couponReasonById, setCouponReasonById] = useState<Record<number, string | null>>({});
-  
+
 
   useEffect(() => {
     const load = async () => {
       const { data, error } = await (supabase as any)
         .from("tipos_bono")
-        .select("id, nombre, precio, numero_clases, duracion_dias")
+        .select("id, nombre, precio, numero_clases, duracion_dias, descripcion, numero_barras_tipo")
         .eq("activo", true)
         .order("precio", { ascending: true });
       if (error) {
@@ -49,27 +49,32 @@ const Bonos = () => {
 
         {/* Validación por tarjeta; se retiró el input global para evitar confusiones */}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {bonos.map((b) => (
             <Card key={b.id} className="elegant-shadow hover:shadow-lg transition-all duration-300 h-full flex flex-col">
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-xl font-bold">{b.nombre}</CardTitle>
                 <div className="mt-2">
                   <span className="text-3xl font-bold text-primary">€{Number(b.precio).toFixed(2)}</span>
-                  <span className="text-muted-foreground">/Caducidad: {b.duracion_dias === 90 ? '3 meses' : '1 mes'}</span>
+                  <span className="text-muted-foreground">/Caducidad: {b.duracion_dias ? (b.duracion_dias >= 30 ? `${Math.floor(b.duracion_dias / 30)} mes${Math.floor(b.duracion_dias / 30) > 1 ? 'es' : ''}` : `${b.duracion_dias} días`) : 'N/A'}</span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 flex flex-col grow">
                 <p className="text-muted-foreground text-center">
-                  {b.nombre.includes('mañanas')
+                  {b.descripcion || (b.nombre.includes('mañanas')
                     ? (b.nombre.includes('5 barras') ? 'Precio base reducido, recomendado para principiantes' : 'Para peñita guay que madruga')
-                    : (b.nombre.includes('5 barras') ? 'Precio base, recomendado para principiantes' : 'Para los más adictos a entrenar con nosotros')}
+                    : (b.nombre.includes('5 barras') ? 'Precio base, recomendado para principiantes' : 'Para los más adictos a entrenar con nosotros'))}
                 </p>
                 <ul className="space-y-1 text-sm">
                   <li className="flex items-center justify-center gap-2">
                     <Badge variant="secondary">{b.numero_clases ?? 0} sesiones</Badge>
                   </li>
-                  <li className="text-center text-muted-foreground">Caduca en {b.duracion_dias === 90 ? '3 meses' : '1 mes'}</li>
+                  <li className="text-center text-muted-foreground">Caduca en {b.duracion_dias} días</li>
+                  {(b as any).numero_barras_tipo === 3 && (
+                    <li className="flex justify-center mt-2">
+                      <Badge variant="default" className="bg-primary/80">Sala Entera (3 barras)</Badge>
+                    </li>
+                  )}
                 </ul>
                 <div>
                   <label htmlFor={`coupon-${b.id}`} className="block text-xs mb-1 text-muted-foreground">Código de descuento</label>
@@ -88,16 +93,16 @@ const Bonos = () => {
                       onClick={async () => {
                         try {
                           const code = (couponById[b.id] ?? '').trim();
-                          if (!code) { 
-                            setCouponStatusById((p) => ({ ...p, [b.id]: 'invalid' })); 
+                          if (!code) {
+                            setCouponStatusById((p) => ({ ...p, [b.id]: 'invalid' }));
                             setCouponReasonById((p) => ({ ...p, [b.id]: 'vacío' }));
-                            return; 
+                            return;
                           }
                           const { data: user } = await supabase.auth.getUser();
-                          if (!user?.user?.id) { 
-                            setCouponStatusById((p) => ({ ...p, [b.id]: 'invalid' })); 
+                          if (!user?.user?.id) {
+                            setCouponStatusById((p) => ({ ...p, [b.id]: 'invalid' }));
                             setCouponReasonById((p) => ({ ...p, [b.id]: 'no_autenticado' }));
-                            return; 
+                            return;
                           }
                           const { data, error } = await (supabase as any).rpc('validar_cupon', {
                             _codigo: code,
@@ -106,11 +111,11 @@ const Bonos = () => {
                             _item_id: b.id,
                             _precio: b.precio
                           });
-                          if (error) { 
-                            console.error(error); 
-                            setCouponStatusById((p) => ({ ...p, [b.id]: 'invalid' })); 
+                          if (error) {
+                            console.error(error);
+                            setCouponStatusById((p) => ({ ...p, [b.id]: 'invalid' }));
                             setCouponReasonById((p) => ({ ...p, [b.id]: 'error_rpc' }));
-                            return; 
+                            return;
                           }
                           if (Array.isArray(data) && data.length && data[0].valido) {
                             setCouponStatusById((p) => ({ ...p, [b.id]: 'valid' }));

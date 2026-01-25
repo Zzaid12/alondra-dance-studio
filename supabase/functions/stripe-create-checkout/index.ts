@@ -113,6 +113,15 @@ Deno.serve(async (req) => {
           console.log("✓ Cupón válido. Precio final:", precioFinal, "cupon_id:", cuponId);
         } else {
           console.log("⚠ Cupón no válido. Motivo:", res[0].motivo);
+          // Detener el proceso y devolver error para que el usuario sepa por qué falló
+          return new Response(JSON.stringify({
+            error: "El cupón no es válido",
+            code: "CUPON_INVALIDO",
+            motivo: res[0].motivo
+          }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders }
+          });
         }
       } else {
         console.log("⚠ validar_cupon no devolvió filas");

@@ -30,6 +30,13 @@ export const PricingSection = () => {
       description: "Para los más adictos a entrenar con nosotros",
       features: ["10 sesiones", "Caduca en 3 meses"],
     },
+    {
+      name: "Bono 4 Salas Completas",
+      price: "80",
+      period: "Caducidad: 1 mes",
+      description: "Reserva la sala completa",
+      features: ["4 sesiones de sala entera", "3 barras por sesión", "Caduca en 1 mes"],
+    },
   ];
 
   const sala = [
@@ -57,8 +64,8 @@ export const PricingSection = () => {
             Reserva tu <span className="hero-text-gradient">Espacio</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          ¿Listo para entrenar en un espacio profesional y flexible? 
-En Alondra Pole Space puedes reservar fácilmente tu espacio de entrenamiento libre en solo unos clics.
+            ¿Listo para entrenar en un espacio profesional y flexible?
+            En Alondra Pole Space puedes reservar fácilmente tu espacio de entrenamiento libre en solo unos clics.
 
           </p>
         </div>
@@ -68,7 +75,7 @@ En Alondra Pole Space puedes reservar fácilmente tu espacio de entrenamiento li
           {/* Barra suelta */}
           {individuales.map((plan, index) => (
             <Card key={`barra-${index}`} className="relative elegant-shadow hover:shadow-lg transition-all duration-300 h-full flex flex-col">
-              
+
               <CardHeader className="text-center pb-6">
                 <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
                 <div className="mt-3">
@@ -97,7 +104,7 @@ En Alondra Pole Space puedes reservar fácilmente tu espacio de entrenamiento li
 
           {/* Bonos */}
           {bonos.map((plan, index) => (
-            <Card key={`bono-${index}`} className="relative elegant-shadow hover:shadow-lg transition-all duration-300 h-full flex flex-col">            
+            <Card key={`bono-${index}`} className="relative elegant-shadow hover:shadow-lg transition-all duration-300 h-full flex flex-col">
               <CardHeader className="text-center pb-6">
                 <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
                 <div className="mt-3">
@@ -161,7 +168,7 @@ En Alondra Pole Space puedes reservar fácilmente tu espacio de entrenamiento li
         {/* Payment info */}
         <div className="text-center mt-12 p-6 bg-muted/50 rounded-lg align-center">
           <p className="text-muted-foreground text-center">
-            📅 Reservas sin anticipación • 
+            📅 Reservas sin anticipación •
             🔄 Política de cancelación flexible
           </p>
         </div>
