@@ -1,3 +1,5 @@
+DROP VIEW IF EXISTS public.vista_bonos_activos;
+
 create or replace view public.vista_bonos_activos as
 select b.id as bono_usuario_id,
        b.usuario_id,

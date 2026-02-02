@@ -647,6 +647,7 @@ const Booking = () => {
                           <Button
                             disabled={loadingAction || !acceptedNorms}
                             onClick={async () => {
+                              const { data: user } = await supabase.auth.getUser();
                               if (!date) return;
                               const sel = times.find(t => t.label === selectedTime);
                               if (!sel) return;
