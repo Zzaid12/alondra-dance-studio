@@ -88,7 +88,7 @@ const Profile = () => {
           setBirthDate(prof.birth_date ?? "");
           setExperience(prof.experience_level ?? "");
         }
-      } catch {}
+      } catch { }
       if (!firstName && !lastName && !phone) {
         try {
           const { data: perf, error: perfError } = await (supabase as any)
@@ -162,9 +162,9 @@ const Profile = () => {
           (bonosData || []).map((b: any) => {
             const diasRestantes = b.fecha_caducidad
               ? Math.max(
-                  Math.ceil((new Date(b.fecha_caducidad).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-                  0
-                )
+                Math.ceil((new Date(b.fecha_caducidad).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+                0
+              )
               : null; // sin activar
             return {
               id: b.id,
@@ -260,7 +260,7 @@ const Profile = () => {
           nombre: [firstName, lastName].filter(Boolean).join(" ") || null,
           telefono: phone || null,
         }, { onConflict: "id" });
-      } catch {}
+      } catch { }
     } finally {
       setSaving(false);
       setEditorAbierto(false);
@@ -319,7 +319,7 @@ const Profile = () => {
                       <Input id="birthDate" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      
+
                     </div>
                   </div>
                   <div className="flex gap-4 pt-2">
@@ -353,8 +353,8 @@ const Profile = () => {
                   const [year, month, day] = r.fecha.split('-').map(Number);
                   const fechaReserva = new Date(year, month - 1, day);
                   const fechaFormateada = fechaReserva.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
-                  const horaFormateada = r.hora_inicio 
-                    ? r.hora_inicio.slice(0, 5) 
+                  const horaFormateada = r.hora_inicio
+                    ? r.hora_inicio.slice(0, 5)
                     : fechaReserva.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                   return (
                     <div key={r.id} className="flex items-center justify-between">
@@ -478,7 +478,41 @@ const Profile = () => {
                         <p className="text-xs text-muted-foreground">Bono listo para usar</p>
                       )}
                     </div>
-                    <Badge variant="secondary" className="text-xs">{b.clases_restantes} sesiones</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">{b.clases_restantes} sesiones</Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={async () => {
+                              const confirmar = window.confirm("¿Estás seguro de que quieres eliminar este bono? Esta acción no se puede deshacer.");
+                              if (!confirmar) return;
+
+                              const { error } = await (supabase as any)
+                                .from("bonos_usuario")
+                                .update({ estado: "eliminado" })
+                                .eq("id", b.id);
+
+                              if (error) {
+                                console.error("Error eliminando bono:", error);
+                                alert("No se pudo eliminar el bono. Inténtalo de nuevo.");
+                              } else {
+                                // Actualizar estado local
+                                setBonos((prev) => prev.filter((bono) => bono.id !== b.id));
+                                alert("Bono eliminado correctamente.");
+                              }
+                            }}
+                          >
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 ))}
               </CardContent>

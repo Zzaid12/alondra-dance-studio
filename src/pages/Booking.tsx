@@ -36,10 +36,10 @@ const Booking = () => {
     oneBarMorningPrice?: number | null;
     oneBarAfternoonId?: number | null;
     oneBarAfternoonPrice?: number | null;
-  }>({ 
-    oneBarId: null, 
-    oneBarPrice: null, 
-    threeBarsId: null, 
+  }>({
+    oneBarId: null,
+    oneBarPrice: null,
+    threeBarsId: null,
     threeBarsPrice: null,
     salaNormalId: null,
     salaNormalPrice: null,
@@ -49,12 +49,13 @@ const Booking = () => {
     salaNormalMorningPrice: null,
     salaPlus6MorningId: null,
     salaPlus6MorningPrice: null,
-    oneBarMorningId: null, 
-    oneBarMorningPrice: null, 
-    oneBarAfternoonId: null, 
-    oneBarAfternoonPrice: null 
+    oneBarMorningId: null,
+    oneBarMorningPrice: null,
+    oneBarAfternoonId: null,
+    oneBarAfternoonPrice: null
   });
-  const [bonoDisponible, setBonoDisponible] = useState<{ bono_usuario_id: number; clases_restantes: number; fecha_caducidad: string; tipo_bono?: string } | null>(null);
+  const [bonosDisponibles, setBonosDisponibles] = useState<{ bono_usuario_id: number; clases_restantes: number; fecha_caducidad: string; tipo_bono?: string; numero_barras_tipo?: number }[]>([]);
+  const [selectedBonoId, setSelectedBonoId] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<boolean>(false);
   const [coupon, setCoupon] = useState<string>("");
   const [acceptedNorms, setAcceptedNorms] = useState<boolean>(false);
@@ -83,7 +84,7 @@ const Booking = () => {
         return;
       }
       setSelectedTime("");
-      const weekday = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"][date.getDay()];
+      const weekday = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"][date.getDay()];
 
       // 1) Traer todas las franjas activas del día seleccionado
       // NOTA: Las franjas horarias son COMPARTIDAS entre todos los tipos de reserva
@@ -94,7 +95,7 @@ const Booking = () => {
         .eq("dia_semana", weekday)
         .eq("activo", true)
         .order("hora_inicio");
-      
+
       if (e1) {
         console.error(e1);
         setTimes([]);
@@ -105,7 +106,7 @@ const Booking = () => {
       // (aunque solo debería haber una franja por hora, agrupamos por si acaso)
       const horasUnicas = new Map<string, any>();
       (franjas || []).forEach((f: any) => {
-        const horaKey = String(f.hora_inicio).slice(0,5);
+        const horaKey = String(f.hora_inicio).slice(0, 5);
         if (!horasUnicas.has(horaKey)) {
           horasUnicas.set(horaKey, f);
         }
@@ -129,7 +130,10 @@ const Booking = () => {
       (disp || []).forEach((d: any) => franjaIdToDisponibles.set(Number(d.franja_horaria_id), Number(d.barras_disponibles)));
 
       // 4) Calcular barras necesarias según selección
-      const barrasNecesarias = (selectedOption === "sala-normal" || selectedOption === "sala-plus6") ? 3 : 1; // barra o bono = 1
+      // Si el bono es de sala (numero_barras_tipo >= 3), necesitamos 3 barras
+      const bonoSeleccionado = bonosDisponibles.find(b => String(b.bono_usuario_id) === selectedBonoId);
+      const bonoEsSala = selectedOption === "bono" && bonoSeleccionado?.numero_barras_tipo && bonoSeleccionado.numero_barras_tipo >= 3;
+      const barrasNecesarias = (selectedOption === "sala-normal" || selectedOption === "sala-plus6" || bonoEsSala) ? 3 : 1;
 
       // 5) Determinar franja del día (mañanas o tarde/punta) según hora seleccionada
       const isMorningTime = (timeLabel: string) => {
@@ -139,14 +143,14 @@ const Booking = () => {
 
       // 6) Construir lista de horarios con disponibilidad
       const items = franjasFiltradas.map((f: any) => {
-        const label = String(f.hora_inicio).slice(0,5);
-        
+        const label = String(f.hora_inicio).slice(0, 5);
+
         // Determinar el tipo_reserva_id correcto según la opción seleccionada
         let tipoReservaId = Number(f.tipo_reserva_id);
         if (selectedOption === "sala-normal" || selectedOption === "sala-plus6") {
           const isMorning = isMorningTime(label);
           if (selectedOption === "sala-normal") {
-            tipoReservaId = isMorning 
+            tipoReservaId = isMorning
               ? (tiposCatalogo.salaNormalMorningId ?? tiposCatalogo.salaNormalId ?? 0)
               : (tiposCatalogo.salaNormalId ?? 0);
           } else { // sala-plus6
@@ -154,19 +158,30 @@ const Booking = () => {
               ? (tiposCatalogo.salaPlus6MorningId ?? tiposCatalogo.salaPlus6Id ?? 0)
               : (tiposCatalogo.salaPlus6Id ?? 0);
           }
-        } else if ((selectedOption === "barra" || selectedOption === "bono") && tiposCatalogo.oneBarId) {
+        } else if (selectedOption === "bono") {
+          // Si el bono es de sala, usamos el ID de reserva de sala
+          if (bonoSeleccionado?.numero_barras_tipo === 3) {
+            const isMorning = isMorningTime(label);
+            // Usar sala normal por defecto para bonos de sala
+            tipoReservaId = isMorning
+              ? (tiposCatalogo.salaNormalMorningId ?? tiposCatalogo.salaNormalId ?? 0)
+              : (tiposCatalogo.salaNormalId ?? 0);
+          } else if (tiposCatalogo.oneBarId) {
+            tipoReservaId = tiposCatalogo.oneBarId;
+          }
+        } else if (selectedOption === "barra" && tiposCatalogo.oneBarId) {
           tipoReservaId = tiposCatalogo.oneBarId;
         }
-        
+
         // Usar el franjaId directamente (todas las reservas usan la misma franja física)
         const franjaIdCorrecto = f.id;
-        
+
         // Calcular disponibilidad (todas las franjas comparten las mismas 3 barras)
-        const disponibles = franjaIdToDisponibles.has(franjaIdCorrecto) 
-          ? franjaIdToDisponibles.get(franjaIdCorrecto)! 
+        const disponibles = franjaIdToDisponibles.has(franjaIdCorrecto)
+          ? franjaIdToDisponibles.get(franjaIdCorrecto)!
           : 3;
         let disabled = disponibles < barrasNecesarias;
-        
+
         // Si la fecha seleccionada es hoy, deshabilitar horas ya pasadas
         if (startSelected.getTime() === startToday.getTime()) {
           const [hh, mm] = label.split(":").map(Number);
@@ -174,13 +189,13 @@ const Booking = () => {
           const nowMs = today.getHours() * 60 + today.getMinutes();
           if (timeMs <= nowMs) disabled = true;
         }
-        
+
         return { label, franjaId: franjaIdCorrecto as number, tipoReservaId, disponibles, disabled };
       });
       setTimes(items);
     };
     load();
-  }, [date, selectedOption, tiposCatalogo]);
+  }, [date, selectedOption, tiposCatalogo, bonosDisponibles, selectedBonoId]);
 
   // Cargar catálogo de tipos (1 barra mañana/tarde y 3 barras) una vez
   useEffect(() => {
@@ -197,13 +212,13 @@ const Booking = () => {
       const oneMorning = ones.find((t: any) => Number(t.id) === 4) || ones.find((t: any) => String(t.nombre).toLowerCase().includes('mañ')); // prefer id 4
       const oneAfternoon = ones.find((t: any) => Number(t.id) !== (oneMorning ? Number(oneMorning.id) : -1)) || null;
       const oneFallback = ones[0] || null;
-      
+
       // Tipos de sala (3 barras)
       const salas = (data || []).filter((t: any) => Number(t.numero_barras) === 3);
-      
+
       // Log para debug
       console.log("Tipos de sala encontrados:", salas.map((s: any) => ({ id: s.id, nombre: s.nombre, precio: s.precio_entrada })));
-      
+
       // Sala normal (hasta 6 personas) - Buscar específicamente "hasta 6" y NO "+6"
       const salaNormal = salas.find((t: any) => {
         const nombre = String(t.nombre).toLowerCase();
@@ -217,7 +232,7 @@ const Booking = () => {
         const nombre = String(t.nombre).toLowerCase();
         return nombre.includes('hasta 6') && (nombre.includes('tarde') || nombre.includes('punta')) && !nombre.includes('+6');
       });
-      
+
       // Sala +6 personas - Buscar específicamente "+6" o "más de 6"
       const salaPlus6 = salas.find((t: any) => {
         const nombre = String(t.nombre).toLowerCase();
@@ -231,16 +246,16 @@ const Booking = () => {
         const nombre = String(t.nombre).toLowerCase();
         return (nombre.includes('+6') || nombre.includes('más de 6')) && (nombre.includes('tarde') || nombre.includes('punta'));
       });
-      
+
       // Log para debug
       console.log("Sala normal encontrada:", salaNormal ? { id: salaNormal.id, nombre: salaNormal.nombre, precio: salaNormal.precio_entrada } : null);
       console.log("Sala normal tarde:", salaNormalTarde ? { id: salaNormalTarde.id, nombre: salaNormalTarde.nombre, precio: salaNormalTarde.precio_entrada } : null);
       console.log("Sala +6 encontrada:", salaPlus6 ? { id: salaPlus6.id, nombre: salaPlus6.nombre, precio: salaPlus6.precio_entrada } : null);
       console.log("Sala +6 tarde:", salaPlus6Tarde ? { id: salaPlus6Tarde.id, nombre: salaPlus6Tarde.nombre, precio: salaPlus6Tarde.precio_entrada } : null);
-      
+
       // Fallback: usar sala normal si no se encuentra específica
       const three = salaNormal || salaPlus6 || salas[0] || null;
-      
+
       setTiposCatalogo({
         oneBarId: oneFallback ? Number(oneFallback.id) : null,
         oneBarPrice: oneFallback ? Number(oneFallback.precio_entrada) : null,
@@ -263,41 +278,48 @@ const Booking = () => {
     loadTipos();
   }, []);
 
-  // Comprobar bono activo si se escoge "bono"
+  // Comprobar bonos activos si se escoge "bono"
   useEffect(() => {
-    const loadBono = async () => {
+    const loadBonos = async () => {
       if (selectedOption !== "bono") {
-        setBonoDisponible(null);
+        setBonosDisponibles([]);
+        setSelectedBonoId(null);
         return;
       }
       const { data: user } = await supabase.auth.getUser();
       if (!user?.user?.id) {
-        setBonoDisponible(null);
+        setBonosDisponibles([]);
+        setSelectedBonoId(null);
         return;
       }
       const { data, error } = await (supabase as any)
         .from("vista_bonos_activos")
-        .select("bono_usuario_id,clases_restantes,fecha_caducidad,tipo_bono")
+        .select("bono_usuario_id,clases_restantes,fecha_caducidad,tipo_bono,numero_barras_tipo")
         .eq("usuario_id", user.user.id)
         .order("fecha_caducidad", { ascending: true });
       if (error) {
         console.error(error);
-        setBonoDisponible(null);
+        setBonosDisponibles([]);
+        setSelectedBonoId(null);
         return;
       }
-      const elegible = (data || []).find((b: any) => Number(b.clases_restantes) > 0);
-      if (elegible) {
-        setBonoDisponible({
-          bono_usuario_id: Number(elegible.bono_usuario_id),
-          clases_restantes: Number(elegible.clases_restantes),
-          fecha_caducidad: String(elegible.fecha_caducidad),
-          tipo_bono: String(elegible.tipo_bono),
-        });
+      const disponibles = (data || []).filter((b: any) => Number(b.clases_restantes) > 0);
+      if (disponibles.length > 0) {
+        setBonosDisponibles(disponibles.map((d: any) => ({
+          bono_usuario_id: Number(d.bono_usuario_id),
+          clases_restantes: Number(d.clases_restantes),
+          fecha_caducidad: String(d.fecha_caducidad),
+          tipo_bono: String(d.tipo_bono),
+          numero_barras_tipo: d.numero_barras_tipo ? Number(d.numero_barras_tipo) : 1,
+        })));
+        // Seleccionar el primero por defecto
+        setSelectedBonoId(String(disponibles[0].bono_usuario_id));
       } else {
-        setBonoDisponible(null);
+        setBonosDisponibles([]);
+        setSelectedBonoId(null);
       }
     };
-    loadBono();
+    loadBonos();
   }, [selectedOption]);
 
   const franjaParteDia = useMemo(() => {
@@ -312,7 +334,7 @@ const Booking = () => {
     return false; // Ya no hay opciones de mañanas
   }, [selectedTime]);
 
-  
+
 
   return (
     <div className="min-h-screen pt-20 pb-8 bg-secondary/30">
@@ -381,13 +403,12 @@ const Booking = () => {
                           key={t.franjaId}
                           onClick={() => !t.disabled && setSelectedTime(t.label)}
                           disabled={t.disabled}
-                          className={`text-sm h-9 rounded-md border px-3 transition ${
-                            t.disabled
-                              ? 'opacity-50 cursor-not-allowed'
-                              : isSelected
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background hover:bg-accent'
-                          }`}
+                          className={`text-sm h-9 rounded-md border px-3 transition ${t.disabled
+                            ? 'opacity-50 cursor-not-allowed'
+                            : isSelected
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background hover:bg-accent'
+                            }`}
                         >
                           {t.label}
                         </button>
@@ -413,11 +434,11 @@ const Booking = () => {
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Fecha</span>
                             <span className="font-medium">
-                              {date ? date.toLocaleDateString('es-ES', { 
-                                weekday: 'long', 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
+                              {date ? date.toLocaleDateString('es-ES', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
                               }) : ''}
                             </span>
                           </div>
@@ -436,7 +457,7 @@ const Booking = () => {
                                     return hh < 14;
                                   })() : false;
                                   if (selectedOption === 'sala-normal') {
-                                    base = isMorning 
+                                    base = isMorning
                                       ? (tiposCatalogo.salaNormalMorningPrice ?? tiposCatalogo.salaNormalPrice ?? 0)
                                       : (tiposCatalogo.salaNormalPrice ?? 0);
                                   } else if (selectedOption === 'sala-plus6') {
@@ -444,8 +465,8 @@ const Booking = () => {
                                       ? (tiposCatalogo.salaPlus6MorningPrice ?? tiposCatalogo.salaPlus6Price ?? 0)
                                       : (tiposCatalogo.salaPlus6Price ?? 0);
                                   } else {
-                                    base = isMorning 
-                                      ? (tiposCatalogo.oneBarMorningPrice ?? tiposCatalogo.oneBarPrice ?? 0) 
+                                    base = isMorning
+                                      ? (tiposCatalogo.oneBarMorningPrice ?? tiposCatalogo.oneBarPrice ?? 0)
                                       : (tiposCatalogo.oneBarAfternoonPrice ?? tiposCatalogo.oneBarPrice ?? 0);
                                   }
                                   if (discountedPrice !== null && couponStatus === 'valid') {
@@ -482,7 +503,7 @@ const Booking = () => {
                                         let itemId = null;
                                         let precio = 0;
                                         if (selectedOption === 'sala-normal') {
-                                          itemId = isMorning 
+                                          itemId = isMorning
                                             ? (tiposCatalogo.salaNormalMorningId ?? tiposCatalogo.salaNormalId ?? null)
                                             : (tiposCatalogo.salaNormalId ?? null);
                                           precio = isMorning
@@ -496,11 +517,11 @@ const Booking = () => {
                                             ? (tiposCatalogo.salaPlus6MorningPrice ?? tiposCatalogo.salaPlus6Price ?? 0)
                                             : (tiposCatalogo.salaPlus6Price ?? 0);
                                         } else {
-                                          itemId = isMorning 
-                                            ? (tiposCatalogo.oneBarMorningId ?? tiposCatalogo.oneBarId ?? null) 
+                                          itemId = isMorning
+                                            ? (tiposCatalogo.oneBarMorningId ?? tiposCatalogo.oneBarId ?? null)
                                             : (tiposCatalogo.oneBarAfternoonId ?? tiposCatalogo.oneBarId ?? null);
-                                          precio = isMorning 
-                                            ? (tiposCatalogo.oneBarMorningPrice ?? tiposCatalogo.oneBarPrice ?? 0) 
+                                          precio = isMorning
+                                            ? (tiposCatalogo.oneBarMorningPrice ?? tiposCatalogo.oneBarPrice ?? 0)
                                             : (tiposCatalogo.oneBarAfternoonPrice ?? tiposCatalogo.oneBarPrice ?? 0);
                                         }
                                         if (!itemId) { setCouponStatus('invalid'); return; }
@@ -520,7 +541,7 @@ const Booking = () => {
                                           let final = d.precio_final ?? d.precio_con_descuento ?? null;
                                           if (final === null) {
                                             if (d.amount_off) final = Math.max(base - Number(d.amount_off), 0);
-                                            else if (d.percent_off) final = Math.max(base * (1 - Number(d.percent_off)/100), 0);
+                                            else if (d.percent_off) final = Math.max(base * (1 - Number(d.percent_off) / 100), 0);
                                           }
                                           setDiscountedPrice(final !== null ? Number(final) : base);
                                         } else {
@@ -546,17 +567,39 @@ const Booking = () => {
                               </div>
                             </>
                           )}
-                          
+
                           {selectedOption === 'bono' && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Bono</span>
-                              <span className="font-medium">
-                                {bonoDisponible
-                                  ? bonoDisponible.fecha_caducidad
-                                    ? `${bonoDisponible.clases_restantes} usos restantes · caduca ${new Date(bonoDisponible.fecha_caducidad).toLocaleDateString()}`
-                                    : `${bonoDisponible.clases_restantes} usos restantes · Bono listo para usar`
-                                  : 'No tienes bonos activos'}
-                              </span>
+                            <div className="flex flex-col gap-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Bono</span>
+                                {bonosDisponibles.length > 0 ? (
+                                  <div className="w-[60%]">
+                                    <Select value={selectedBonoId || ""} onValueChange={(val) => setSelectedBonoId(val)}>
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue placeholder="Selecciona un bono" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {bonosDisponibles.map((b) => (
+                                          <SelectItem key={b.bono_usuario_id} value={String(b.bono_usuario_id)} className="text-xs">
+                                            {b.tipo_bono} ({b.clases_restantes} usos)
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                ) : (
+                                  <span className="font-medium">No tienes bonos activos</span>
+                                )}
+                              </div>
+                              {selectedBonoId && (() => {
+                                const b = bonosDisponibles.find(bono => String(bono.bono_usuario_id) === selectedBonoId);
+                                if (!b) return null;
+                                return (
+                                  <div className="text-xs text-right text-muted-foreground">
+                                    Caduca el {new Date(b.fecha_caducidad).toLocaleDateString()}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                           {/* Disponibilidad de barras para la franja seleccionada */}
@@ -589,7 +632,7 @@ const Booking = () => {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        {selectedOption === 'bono' && !bonoDisponible ? (
+                        {selectedOption === 'bono' && bonosDisponibles.length === 0 ? (
                           <>
                             <p className="text-sm text-destructive">Necesitas comprar un bono antes de reservar con bono.</p>
                             <Button
@@ -626,27 +669,40 @@ const Booking = () => {
                               try {
                                 setLoadingAction(true);
                                 if (selectedOption === 'bono') {
-                                  const { data: user } = await supabase.auth.getUser();
-                                  if (!user?.user?.id || !bonoDisponible) return;
+                                  const bonoSeleccionado = bonosDisponibles.find(b => String(b.bono_usuario_id) === selectedBonoId);
+                                  if (!user?.user?.id || !bonoSeleccionado) return;
                                   // Validación de tramo horario según tipo de bono
-                                  const bonoEsMananas = (bonoDisponible.tipo_bono || '').toLowerCase().includes('mañanas');
+                                  const bonoEsMananas = (bonoSeleccionado.tipo_bono || '').toLowerCase().includes('mañanas');
                                   if (bonoEsMananas && !isMorning) {
                                     alert('Este bono solo es válido para mañanas. Elige un horario antes de las 14:00.');
                                     return;
                                   }
-                                  const bonoEsTarde = (bonoDisponible.tipo_bono || '').toLowerCase().includes('tarde');
-                                  const bonoEsPunta = (bonoDisponible.tipo_bono || '').toLowerCase().includes('punta');
+                                  const bonoEsTarde = (bonoSeleccionado.tipo_bono || '').toLowerCase().includes('tarde');
+                                  const bonoEsPunta = (bonoSeleccionado.tipo_bono || '').toLowerCase().includes('punta');
                                   if ((bonoEsTarde || bonoEsPunta) && isMorning) {
                                     alert('Este bono es para tarde/punta. Elige un horario a partir de las 14:00.');
                                     return;
                                   }
+                                  // Determinar tipo de reserva según bono
+                                  let tipoReservaIdBono = tiposCatalogo.oneBarId;
+                                  if (bonoSeleccionado.numero_barras_tipo === 3) {
+                                    const isMorning = selectedTime ? (() => {
+                                      const [hh] = selectedTime.split(":").map(Number);
+                                      return hh < 14;
+                                    })() : false;
+
+                                    tipoReservaIdBono = isMorning
+                                      ? (tiposCatalogo.salaNormalMorningId ?? tiposCatalogo.salaNormalId ?? tiposCatalogo.threeBarsId)
+                                      : (tiposCatalogo.salaNormalId ?? tiposCatalogo.threeBarsId);
+                                  }
+
                                   const { data: reservaId, error } = await (supabase as any).rpc('crear_reserva', {
                                     _usuario_id: user.user.id,
                                     _fecha: fechaISO,
                                     _franja_id: sel.franjaId,
-                                    _tipo_reserva_id: tiposCatalogo.oneBarId,
+                                    _tipo_reserva_id: tipoReservaIdBono,
                                     _metodo_pago: 'bono',
-                                    _bono_usuario_id: bonoDisponible.bono_usuario_id,
+                                    _bono_usuario_id: bonoSeleccionado.bono_usuario_id,
                                     _precio_pagado: 0,
                                   });
                                   if (error) throw error;
@@ -678,9 +734,9 @@ const Booking = () => {
                                   })() : false;
                                   let itemId: number | undefined = undefined;
                                   let tipoReservaId: number | undefined = undefined;
-                                  
+
                                   if (selectedOption === 'sala-normal') {
-                                    itemId = isMorning 
+                                    itemId = isMorning
                                       ? (tiposCatalogo.salaNormalMorningId ?? tiposCatalogo.salaNormalId ?? undefined)
                                       : (tiposCatalogo.salaNormalId ?? undefined);
                                     tipoReservaId = itemId;
@@ -690,26 +746,26 @@ const Booking = () => {
                                       : (tiposCatalogo.salaPlus6Id ?? undefined);
                                     tipoReservaId = itemId;
                                   } else {
-                                    itemId = isMorning 
-                                      ? (tiposCatalogo.oneBarMorningId ?? tiposCatalogo.oneBarId ?? undefined) 
+                                    itemId = isMorning
+                                      ? (tiposCatalogo.oneBarMorningId ?? tiposCatalogo.oneBarId ?? undefined)
                                       : (tiposCatalogo.oneBarAfternoonId ?? tiposCatalogo.oneBarId ?? undefined);
                                     tipoReservaId = itemId;
                                   }
-                                  
+
                                   if (!itemId || !tipoReservaId) {
                                     alert('Error: No se pudo determinar el tipo de reserva. Por favor, recarga la página.');
                                     return;
                                   }
-                                  
+
                                   await startCheckout({
-                                      itemType: 'tipo_reserva',
-                                      itemId,
-                                      successUrl: window.location.origin + '/reserva-confirmada',
-                                      cancelUrl: window.location.origin + '/?pago=cancelado',
-                                      fecha: fechaISO,
-                                      franjaId: sel.franjaId,
-                                      tipoReservaId,
-                                      couponCode: coupon || null,
+                                    itemType: 'tipo_reserva',
+                                    itemId,
+                                    successUrl: window.location.origin + '/reserva-confirmada',
+                                    cancelUrl: window.location.origin + '/?pago=cancelado',
+                                    fecha: fechaISO,
+                                    franjaId: sel.franjaId,
+                                    tipoReservaId,
+                                    couponCode: coupon || null,
                                   });
                                 }
                               } catch (err) {
