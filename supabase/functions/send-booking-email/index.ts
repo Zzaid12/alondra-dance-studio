@@ -134,7 +134,7 @@ async function sendEmail(to, subject, html, text) {
     console.log(`   To: ${to}`);
     console.log(`   From: ${fromName} <${fromEmail}>`);
     console.log(`   Subject: ${subject}`);
-    
+
     // Opción A: SMTP2GO
     const smtp2goKey = Deno.env.get("SMTP2GO_API_KEY");
     if (smtp2goKey) {
@@ -168,7 +168,7 @@ async function sendEmail(to, subject, html, text) {
       console.log(`✓ Email enviado vía SMTP2GO a ${to}`);
       return;
     }
-    
+
     // Opción B: Brevo
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (brevoKey) {
@@ -204,7 +204,7 @@ async function sendEmail(to, subject, html, text) {
       console.log(`✓ Email enviado vía Brevo a ${to} - MessageID: ${responseData.messageId || 'N/A'}`);
       return;
     }
-    
+
     throw new Error("No hay servicio de email configurado");
   } catch (error) {
     console.error(`✗ Error enviando email a ${to}:`, error.message);
@@ -214,22 +214,22 @@ async function sendEmail(to, subject, html, text) {
 
 Deno.serve(async (req) => {
   console.log("=== ENVÍO EMAIL RESERVA ===");
-  
+
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: corsHeaders
     });
   }
-  
+
   try {
     const sb = createClient(
-      Deno.env.get("SUPABASE_URL"), 
+      Deno.env.get("SUPABASE_URL"),
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
     );
-    
+
     const body = await req.json();
     const { reserva_id } = body;
-    
+
     if (!reserva_id) {
       return new Response(JSON.stringify({
         error: "Falta reserva_id"
@@ -241,9 +241,9 @@ Deno.serve(async (req) => {
         }
       });
     }
-    
+
     console.log(`→ Procesando reserva ID: ${reserva_id}`);
-    
+
     // Obtener datos de la reserva con joins
     const { data: reserva, error: reservaError } = await sb
       .from('reservas')
@@ -254,24 +254,24 @@ Deno.serve(async (req) => {
       `)
       .eq('id', reserva_id)
       .single();
-      
+
     if (reservaError || !reserva) {
       console.error('✗ Error obteniendo reserva:', reservaError);
       throw new Error('Reserva no encontrada');
     }
-    
+
     console.log('✓ Reserva obtenida:', JSON.stringify(reserva));
-    
+
     // Obtener email del usuario desde auth.users
     const { data: userData, error: userError } = await sb.auth.admin.getUserById(reserva.usuario_id);
     if (userError || !userData?.user?.email) {
       console.error('✗ Error obteniendo email del usuario:', userError);
       throw new Error('Email del usuario no encontrado');
     }
-    
+
     const userEmail = userData.user.email;
     console.log('✓ Email del usuario:', userEmail);
-    
+
     // Preparar datos del email
     // Formatear fecha sin problemas de zona horaria
     const fechaStr = reserva.fecha;
@@ -283,55 +283,28 @@ Deno.serve(async (req) => {
       month: 'long',
       day: 'numeric'
     });
-    
+
     const horaInicio = reserva.franjas_horarias?.hora_inicio || '';
     const horaFin = reserva.franjas_horarias?.hora_fin || '';
     const horario = horaInicio && horaFin ? `de ${horaInicio} a ${horaFin}` : '';
     const nombreTipoReserva = reserva.tipos_reserva?.nombre || 'Reserva';
     const metodoPago = reserva.metodo_pago === 'bono' ? 'Bono' : 'Pago directo';
     const precio = reserva.metodo_pago === 'bono' ? 'Gratis (bono)' : `${Number(reserva.precio_pagado || 0).toFixed(2)}€`;
-    
-    // Generar código de acceso TTLock
-    let codigoAcceso = null;
+
+    // Generar código de acceso TTLock - DESHABILITADO POR PROBLEMAS FÍSICOS
+    // Se usa código fijo 1408 para cajetín
+    let codigoAcceso = "1408";
     let validoDesde = null;
     let validoHasta = null;
+    let instruccionesAcceso = "Código del cajetín para coger la llave ";
+
     try {
-      console.log('🔐 Generando código de acceso TTLock...');
-      console.log('   Variables TTLock:', {
-        hasClientId: !!Deno.env.get("TTLOCK_CLIENT_ID"),
-        hasClientSecret: !!Deno.env.get("TTLOCK_CLIENT_SECRET"),
-        hasUsername: !!Deno.env.get("TTLOCK_USERNAME"),
-        hasPassword: !!Deno.env.get("TTLOCK_PASSWORD"),
-        hasLockId: !!Deno.env.get("TTLOCK_LOCK_ID")
-      });
-      
-      if (horaInicio && horaFin) {
-        console.log('→ Generando código de acceso TTLock...');
-        const resultadoCodigo = await generarCodigoAccesoReserva(fecha, horaInicio, horaFin);
-        codigoAcceso = resultadoCodigo.codigo;
-        validoDesde = resultadoCodigo.validoDesde;
-        validoHasta = resultadoCodigo.validoHasta;
-        console.log('✓ Código generado:', codigoAcceso);
-        
-        // Guardar código en la reserva
-        const { error: updateError } = await sb.from('reservas').update({
-          codigo_acceso: codigoAcceso,
-          codigo_acceso_id: resultadoCodigo.passcodeId
-        }).eq('id', reserva_id);
-        
-        if (updateError) {
-          console.error('✗ Error guardando código:', updateError);
-        } else {
-          console.log('✓ Código de acceso guardado en reserva');
-        }
-      } else {
-        console.log('⚠ No se puede generar código: faltan horas de inicio/fin');
-      }
-    } catch (ttlockError) {
-      console.error('✗ Error generando código TTLock:', ttlockError);
-      console.error('   Stack:', ttlockError.stack);
+      // Guardar también en la reserva para referencia
+      await sb.from('reservas').update({ codigo_acceso: codigoAcceso }).eq('id', reserva_id);
+    } catch (dbError) {
+      console.error('✗ Error guardando código en BD:', dbError);
     }
-    
+
     const subject = "Reserva confirmada - Alondra Pole Space";
     const html = `
       <!DOCTYPE html>
@@ -450,12 +423,8 @@ Deno.serve(async (req) => {
               <p style="font-size: 32px; font-weight: bold; text-align: center; color: #752A29; letter-spacing: 4px; margin: 20px 0;">
                 ${codigoAcceso}
               </p>
-              <p style="font-size: 12px; color: #333;">
-                <strong>Válido desde:</strong> ${validoDesde ? new Date(validoDesde).toLocaleString('es-ES') : ''}<br>
-                <strong>Válido hasta:</strong> ${validoHasta ? new Date(validoHasta).toLocaleString('es-ES') : ''}
-              </p>
-              <p style="font-size: 12px; color: #333;">
-                Introduce este código en el teclado de la puerta para acceder al local.
+              <p style="font-size: 14px; text-align: center; color: #333; font-weight: 500;">
+                ${instruccionesAcceso}
               </p>
             </div>
             ` : ''}
@@ -472,12 +441,12 @@ Deno.serve(async (req) => {
       </body>
       </html>
     `;
-    const codigoTexto = codigoAcceso ? `\n\n🔑 CÓDIGO DE ACCESO: ${codigoAcceso}\nVálido desde: ${validoDesde ? new Date(validoDesde).toLocaleString('es-ES') : ''}\nVálido hasta: ${validoHasta ? new Date(validoHasta).toLocaleString('es-ES') : ''}\n\nIntroduce este código en el teclado de la puerta.\n` : '';
+    const codigoTexto = codigoAcceso ? `\n\n🔑 CÓDIGO DE ACCESO: ${codigoAcceso}\n\n${instruccionesAcceso}\n` : '';
     const text = `¡Reserva confirmada!\n\nFecha: ${fechaFormateada}\nHorario: ${horario}\nTipo: ${nombreTipoReserva}\nMétodo de pago: ${metodoPago}\nPrecio: ${precio}${codigoTexto}\n\nPuedes consultar tu reserva en tu perfil.\n¡Te esperamos!`;
-    
+
     // Enviar email
     await sendEmail(userEmail, subject, html, text);
-    
+
     return new Response(JSON.stringify({
       success: true,
       message: "Email enviado"
@@ -488,7 +457,7 @@ Deno.serve(async (req) => {
         ...corsHeaders
       }
     });
-    
+
   } catch (error) {
     console.error('✗ Error general:', error);
     return new Response(JSON.stringify({
