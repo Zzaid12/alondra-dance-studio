@@ -1,0 +1,114 @@
+/* e:/Carlos/webProjects/alondra-polespace/alondra-dance-studio/src/pages/Gallery.css */
+
+.gallery-page-container {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #e3e3db;
+    font-family: "Outfit", sans-serif;
+    position: relative;
+}
+
+.gallery-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.gallery-canvas {
+    position: absolute;
+    will-change: transform;
+}
+
+.item {
+    position: absolute;
+    width: 220px;
+    height: 300px;
+    overflow: hidden;
+    background-color: #000;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+.gallery-expanded-item {
+    position: fixed;
+    z-index: 100;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #e3e3db;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 40px 100px -30px rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+}
+
+.gallery-expanded-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+.gallery-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #e3e3db;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+    opacity: 0;
+    z-index: 2;
+}
+
+.gallery-overlay.active {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+.gallery-instructions {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    padding: 0.75rem 2rem;
+    border-radius: 2rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #333;
+    z-index: 10001;
+    pointer-events: none;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 1000px) {
+    .item {
+        width: 180px;
+        height: 250px;
+    }
+}
+
+@media (max-width: 600px) {
+    .item {
+        width: 140px;
+        height: 190px;
+    }
+}
