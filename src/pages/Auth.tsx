@@ -227,31 +227,10 @@ const Auth = () => {
           });
         }
       } else {
-        // Actualizar el perfil con nombre y teléfono
-        if (authData.user) {
-          const nombreCompleto = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
+        // El perfil se creará automáticamente mediante un trigger en la base de datos (handle_new_user)
+        // por lo que no es necesario realizar el upsert desde el cliente aquí,
+        // evitando errores 401 si la confirmación por email está activada.
 
-          // Intentar actualizar en perfiles (tabla actual) - fallback silencioso
-          try {
-            await (supabase as any).from("perfiles").upsert({
-              id: authData.user.id,
-              nombre: nombreCompleto,
-              telefono: formData.phone.trim(),
-            }, { onConflict: "id" });
-          } catch (e) {
-            // Ignorar si la tabla perfiles no existe o tiene RLS
-            console.log("No se pudo actualizar en perfiles:", e);
-          }
-
-          // También actualizar en profiles por compatibilidad
-          await supabase.from("profiles").upsert({
-            user_id: authData.user.id,
-            first_name: formData.firstName.trim(),
-            last_name: formData.lastName.trim(),
-            email: formData.email.trim(),
-            phone: formData.phone.trim(),
-          }, { onConflict: "user_id" } as any);
-        }
 
         toast({
           title: "¡Registro exitoso!",
