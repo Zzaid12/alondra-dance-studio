@@ -11,9 +11,11 @@ export const Navigation = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
 
+  if (location.pathname.startsWith("/admin")) return null;
+
   const navItems = [
-    
     { href: "/#pricing", label: "Ver Precios" },
+    { href: "/galeria", label: "Galería" },
     ...(user ? [
       { href: "/reservar", label: "Reservar" },
     ] : []),
@@ -29,7 +31,7 @@ export const Navigation = () => {
     if (hashMatch) {
       const hash = hashMatch[1];
       const targetId = hash;
-      
+
       if (location.pathname === "/") {
         // Ya estamos en la página principal, hacer scroll directamente
         e.preventDefault();
@@ -73,14 +75,13 @@ export const Navigation = () => {
                 key={item.href}
                 to={item.href}
                 onClick={(e) => handleHashLink(e, item.href)}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location.pathname === item.href ? "text-primary" : "text-muted-foreground"
-                }`}
+                className={`text-sm font-medium transition-colors hover:text-primary ${location.pathname === item.href ? "text-primary" : "text-muted-foreground"
+                  }`}
               >
                 {item.label}
               </Link>
             ))}
-            
+
             {user ? (
               <Button variant="ghost" asChild className="flex items-center space-x-2">
                 <Link to="/perfil">
@@ -131,14 +132,13 @@ export const Navigation = () => {
                     handleHashLink(e, item.href);
                     setIsOpen(false);
                   }}
-                  className={`text-sm font-medium transition-colors hover:text-primary px-2 py-1 rounded ${
-                    location.pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground"
-                  }`}
+                  className={`text-sm font-medium transition-colors hover:text-primary px-2 py-1 rounded ${location.pathname === item.href ? "text-primary bg-primary/10" : "text-muted-foreground"
+                    }`}
                 >
                   {item.label}
                 </Link>
               ))}
-              
+
               {user ? (
                 <div className="space-y-2 pt-2 border-t border-border">
                   <Button
