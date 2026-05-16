@@ -15,7 +15,6 @@ export const Navigation = () => {
 
   const navItems = [
     { href: "/#pricing", label: "Ver Precios" },
-    { href: "/galeria", label: "Galería" },
     ...(user ? [
       { href: "/reservar", label: "Reservar" },
     ] : []),
