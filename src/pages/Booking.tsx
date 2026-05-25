@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { startCheckout } from "@/lib/checkout";
 import { Input } from "@/components/ui/input";
+import { Info } from "lucide-react";
 
 const Booking = () => {
   const [selectedOption, setSelectedOption] = useState<string>("barra");
@@ -366,6 +367,12 @@ const Booking = () => {
                   <SelectItem value="sala-plus6">Sala entera +6 personas</SelectItem>
                 </SelectContent>
               </Select>
+              {selectedOption === 'barra' && (
+                <div className="flex items-center gap-2 mt-3 text-xs text-amber-600 dark:text-amber-400 pl-1 font-medium">
+                  <Info className="h-3.5 w-3.5 shrink-0" />
+                  <span>Solo una persona, no está permitido compartir barra</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
