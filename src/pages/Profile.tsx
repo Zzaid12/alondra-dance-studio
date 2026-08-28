@@ -472,11 +472,11 @@ const Profile = () => {
                   <div key={b.id} className="flex justify-between items-start">
                     <div>
                       <p className="text-sm font-medium">{b.tipo_bono}</p>
-                      {b.fecha_caducidad ? (
-                        <p className="text-xs text-muted-foreground">Caduca: {new Date(b.fecha_caducidad).toLocaleDateString()} ({b.dias_restantes} días)</p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Bono listo para usar</p>
-                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {b.fecha_caducidad
+                          ? `Caduca: ${new Date(b.fecha_caducidad).toLocaleDateString('es-ES')}${b.dias_restantes != null ? ` (${b.dias_restantes} días)` : ''}`
+                          : 'Sin fecha de caducidad'}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="text-xs">{b.clases_restantes} sesiones</Badge>

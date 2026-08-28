@@ -286,7 +286,7 @@ const BloqueosTab = () => {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from("franjas_horarias")
-                .select("id, hora_inicio, hora_fin, dia_semana")
+                .select("id, hora_inicio, hora_fin, dia_semana, tipo_reserva_id")
                 .eq("activo", true)
                 .order("hora_inicio");
             if (error) throw error;
@@ -325,8 +325,9 @@ const BloqueosTab = () => {
             const { data: userData } = await supabase.auth.getUser();
             const userId = userData.user?.id;
 
-            // Encontrar el tipo ID de la franja (opcional pero requerido por schema)
+            // Encontrar el tipo ID de la franja
             const franjaObj = franjas.find(f => f.id.toString() === selectedFranja);
+            const tipoReservaId = franjaObj?.tipo_reserva_id ? parseInt(franjaObj.tipo_reserva_id.toString()) : 1;
 
             const { error } = await supabase
                 .from("reservas")
@@ -334,7 +335,7 @@ const BloqueosTab = () => {
                     usuario_id: userId,
                     fecha: format(date, "yyyy-MM-dd"),
                     franja_horaria_id: parseInt(selectedFranja),
-                    tipo_reserva_id: 1, // Fallback safe
+                    tipo_reserva_id: tipoReservaId,
                     numero_barras: parseInt(barras),
                     metodo_pago: "admin_manual",
                     estado: "confirmada",

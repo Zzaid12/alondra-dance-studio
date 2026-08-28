@@ -265,7 +265,7 @@ const Auth = () => {
             <CardTitle className="text-center">Bienvenida</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="space-y-4">
+            <Tabs defaultValue={searchParams.get("tab") === "signup" ? "signup" : "signin"} className="space-y-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Iniciar Sesión</TabsTrigger>
                 <TabsTrigger value="signup">Registrarse</TabsTrigger>

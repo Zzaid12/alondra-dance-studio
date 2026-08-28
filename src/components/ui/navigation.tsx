@@ -15,6 +15,7 @@ export const Navigation = () => {
 
   const navItems = [
     { href: "/#pricing", label: "Ver Precios" },
+    { href: "/galeria", label: "Galería" },
     ...(user ? [
       { href: "/reservar", label: "Reservar" },
     ] : []),
@@ -102,7 +103,7 @@ export const Navigation = () => {
                   asChild
                   className="bg-primary hover:bg-primary/90 text-white px-6"
                 >
-                  <Link to="/auth">Reservar Clase</Link>
+                  <Link to="/auth">Reservar</Link>
                 </Button>
               </div>
             )}
@@ -167,7 +168,7 @@ export const Navigation = () => {
                     asChild
                     className="bg-primary hover:bg-primary/90 text-white w-full"
                   >
-                    <Link to="/auth" onClick={() => setIsOpen(false)}>
+                    <Link to="/auth?tab=signup" onClick={() => setIsOpen(false)}>
                       Registrarse
                     </Link>
                   </Button>

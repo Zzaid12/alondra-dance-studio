@@ -22,7 +22,7 @@ export const FAQSection = () => {
     },
     {
       question: "¿Es seguro el pole dance?",
-      answer: "Absolutamente. La seguridad es nuestra prioridad número uno. Nuestras barras están instaladas se revisan regularmente. No te olvides de comenzar siempre con un calentamiento adecuado, dispones de ellos en la sala"
+      answer: "Absolutamente. La seguridad es nuestra prioridad número uno. Nuestras barras están instaladas y se revisan regularmente. No te olvides de comenzar siempre con un calentamiento adecuado, dispones de ellos en la sala."
     },
     {
       question: "¿Cuánto tiempo dura la reserva de 1 barra?",
@@ -54,16 +54,15 @@ export const FAQSection = () => {
             Preguntas <span className="hero-text-gradient">Frecuentes</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Resolvemos las dudas más comunes sobre nuestras clases, 
-            instalaciones y políticas para que puedas comenzar tu journey con confianza.
+            Resolvemos las dudas más comunes sobre nuestro espacio, instalaciones y políticas.
           </p>
         </div>
 
         <div className="max-w-4xl mx-auto">
           <Accordion type="single" collapsible className="space-y-4">
             {faqs.map((faq, index) => (
-              <AccordionItem 
-                key={index} 
+              <AccordionItem
+                key={index}
                 value={`item-${index}`}
                 className="bg-card rounded-lg px-6 border-0 elegant-shadow"
               >
@@ -79,8 +78,8 @@ export const FAQSection = () => {
         </div>
 
         <div className="text-center mt-12">
-          
-          
+
+
         </div>
       </div>
     </section>

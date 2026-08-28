@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# MCP server config (contains service keys)
+../.mcp.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

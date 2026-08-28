@@ -55,9 +55,10 @@ const Booking = () => {
     oneBarAfternoonId: null,
     oneBarAfternoonPrice: null
   });
-  const [bonosDisponibles, setBonosDisponibles] = useState<{ bono_usuario_id: number; clases_restantes: number; fecha_caducidad: string; tipo_bono?: string; numero_barras_tipo?: number }[]>([]);
+  const [bonosDisponibles, setBonosDisponibles] = useState<{ bono_usuario_id: number; clases_restantes: number; fecha_caducidad: string | null; tipo_bono?: string; numero_barras_tipo?: number }[]>([]);
   const [selectedBonoId, setSelectedBonoId] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<boolean>(false);
+  const [bonoError, setBonoError] = useState<string | null>(null);
   const [coupon, setCoupon] = useState<string>("");
   const [acceptedNorms, setAcceptedNorms] = useState<boolean>(false);
   const [couponStatus, setCouponStatus] = useState<"valid" | "invalid" | null>(null);
@@ -309,7 +310,7 @@ const Booking = () => {
         setBonosDisponibles(disponibles.map((d: any) => ({
           bono_usuario_id: Number(d.bono_usuario_id),
           clases_restantes: Number(d.clases_restantes),
-          fecha_caducidad: String(d.fecha_caducidad),
+          fecha_caducidad: d.fecha_caducidad ?? null,
           tipo_bono: String(d.tipo_bono),
           numero_barras_tipo: d.numero_barras_tipo ? Number(d.numero_barras_tipo) : 1,
         })));
@@ -353,9 +354,10 @@ const Booking = () => {
             <CardContent>
               <Select value={selectedOption} onValueChange={(value) => {
                 setSelectedOption(value);
-                setSelectedTime(""); // Reset hora al cambiar modalidad
+                setSelectedTime("");
                 setCouponStatus(null);
                 setDiscountedPrice(null);
+                setBonoError(null);
               }}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Elige modalidad" />
@@ -371,6 +373,21 @@ const Booking = () => {
                 <div className="flex items-center gap-2 mt-3 text-xs text-amber-600 dark:text-amber-400 pl-1 font-medium">
                   <Info className="h-3.5 w-3.5 shrink-0" />
                   <span>Solo una persona, no está permitido compartir barra</span>
+                </div>
+              )}
+              {selectedOption === 'bono' && bonosDisponibles.length === 0 && (
+                <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                  <p className="text-sm text-destructive flex-1">
+                    No tienes bonos activos. Puede que tu bono haya caducado o hayas agotado los usos.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive hover:text-white shrink-0"
+                    onClick={() => { window.location.href = '/bonos'; }}
+                  >
+                    Comprar bono
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -588,7 +605,7 @@ const Booking = () => {
                                       <SelectContent>
                                         {bonosDisponibles.map((b) => (
                                           <SelectItem key={b.bono_usuario_id} value={String(b.bono_usuario_id)} className="text-xs">
-                                            {b.tipo_bono} ({b.clases_restantes} usos)
+                                            {b.tipo_bono} · {b.clases_restantes} usos{b.fecha_caducidad ? ` · caduca ${new Date(b.fecha_caducidad).toLocaleDateString('es-ES')}` : ''}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
@@ -603,7 +620,7 @@ const Booking = () => {
                                 if (!b) return null;
                                 return (
                                   <div className="text-xs text-right text-muted-foreground">
-                                    Caduca el {new Date(b.fecha_caducidad).toLocaleDateString()}
+                                    {b.fecha_caducidad ? `Caduca el ${new Date(b.fecha_caducidad).toLocaleDateString('es-ES')}` : 'Sin fecha de caducidad'}
                                   </div>
                                 );
                               })()}
@@ -639,17 +656,20 @@ const Booking = () => {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        {selectedOption === 'bono' && bonosDisponibles.length === 0 ? (
-                          <>
-                            <p className="text-sm text-destructive">Necesitas comprar un bono antes de reservar con bono.</p>
+                        {bonoError ? (
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                            <p className="text-sm text-destructive flex-1">{bonoError}</p>
                             <Button
+                              size="sm"
                               variant="outline"
-                              className="h-9"
-                              onClick={() => { window.location.href = '/?pre=bonos'; }}
+                              className="border-destructive text-destructive hover:bg-destructive hover:text-white shrink-0"
+                              onClick={() => { window.location.href = '/bonos'; }}
                             >
                               Comprar bono
                             </Button>
-                          </>
+                          </div>
+                        ) : selectedOption === 'bono' && bonosDisponibles.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Selecciona un bono válido para continuar.</p>
                         ) : (
                           <Button
                             disabled={loadingAction || !acceptedNorms}
@@ -713,7 +733,14 @@ const Booking = () => {
                                     _bono_usuario_id: bonoSeleccionado.bono_usuario_id,
                                     _precio_pagado: 0,
                                   });
-                                  if (error) throw error;
+                                  if (error) {
+                                    const msg = String(error.message || '').toLowerCase();
+                                    if (msg.includes('bono') || msg.includes('caducado') || msg.includes('agotado') || msg.includes('clases')) {
+                                      setBonoError('Tu bono ha caducado o no tiene usos disponibles. Compra un nuevo bono para continuar.');
+                                      return;
+                                    }
+                                    throw error;
+                                  }
 
                                   // Enviar email de confirmación
                                   try {
