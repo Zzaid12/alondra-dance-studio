@@ -47,7 +47,7 @@ const Gallery = () => {
             />
           ))}
         </div>
-      </div>
+      </div> 
 
       {selected && (
         <div
